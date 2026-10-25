@@ -1825,9 +1825,16 @@ def _rebuild_code(
             watch_root, extra_excludes=_persisted_excludes or None, gitignore=True,
         ) if _gitignore_enabled else _ignored_always
 
-        # Include document files that have AST extractors (e.g. .md, .mdx, .qmd)
+        # Include document files that have AST extractors (e.g. .md, .mdx, .qmd).
+        # A document that detect() reclassified as a paper (_looks_like_paper,
+        # e.g. Markdown notes quoting an arXiv abstract) gets the same quick-scan
+        # when it has an AST extractor; otherwise an AST-only rebuild gives it
+        # zero nodes with no warning (#4750). Only formats with an extractor
+        # qualify (.md/.mdx/.qmd today): PDFs and plain .txt still have none, so
+        # the _get_extractor filter keeps them out exactly as before.
         ast_doc_files: list[Path] = []
-        for doc_file in detected['files'].get('document', []):
+        for doc_file in [*detected['files'].get('document', []),
+                         *detected['files'].get('paper', [])]:
             p = Path(doc_file)
             if _get_extractor(p) is not None:
                 code_files.append(p)
